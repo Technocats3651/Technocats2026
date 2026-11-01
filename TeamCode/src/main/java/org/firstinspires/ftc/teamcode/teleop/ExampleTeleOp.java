@@ -9,9 +9,13 @@ import org.firstinspires.ftc.teamcode.OpModeStorage;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.ManualDrive;
+
+
+
 @TeleOp(name = "Example TeleOp")
 public class ExampleTeleOp extends OpMode {
     private Follower follower;
+    private boolean lastStartPressed = false;
     @Override
     public void init() {
         follower = Constants.create(hardwareMap);
@@ -34,11 +38,13 @@ public class ExampleTeleOp extends OpMode {
         ManualDrive.driveOrHold(follower, powers);
 
         // relocalise button
-        if (gamepad1.startWasPressed) {
+        // Check if it was JUST pressed this loop
+        if (gamepad1.start && !lastStartPressed) {
             Pose cornerPose = new Pose(10.5, 10.5, Math.toRadians(90));
-            // On the fly Pose creation, we dont recommend this for Autonomous. Only accepts radians for heading
-            follower.setPose(cornerPose); // overrides our pose
+            follower.setPose(cornerPose);
         }
+        // Update the tracking variable at the end of the loop
+        lastStartPressed = gamepad1.start;
 
         follower.update();
         Pose robotPose = follower.pose(); // returns a Pose object

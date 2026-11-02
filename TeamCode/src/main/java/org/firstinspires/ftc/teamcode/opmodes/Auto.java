@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.autos;
+package org.firstinspires.ftc.teamcode.opmodes;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.pedropathing.api.PoseFactory;
@@ -18,7 +18,7 @@ import org.firstinspires.ftc.teamcode.OpModeStorage;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 @Autonomous
-public class ExampleAuto extends OpMode {
+public class Auto extends OpMode {
     private Follower follower;
     private final PoseFactory poseFactory = PoseFactory.degrees();
 
@@ -69,6 +69,10 @@ public class ExampleAuto extends OpMode {
         telemetry.addData("Y", follower.pose().y());
         telemetry.addData("Heading", Math.toDegrees(follower.pose().heading()));
         telemetry.addData("Follower Mode", follower.mode());
+
+        // We will add these two, but you can use the many other follower methods aswell in your own code!
+        telemetry.addData("Path completion", follower.completion());
+        telemetry.addData("Distance remaining in path", follower.remainingDistance());
         telemetry.update();
     }
     @Override

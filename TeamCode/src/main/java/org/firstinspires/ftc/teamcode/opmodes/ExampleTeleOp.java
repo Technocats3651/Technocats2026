@@ -12,7 +12,7 @@ import com.pedropathing.follower.ManualDrive;
 
 
 @com.qualcomm.robotcore.eventloop.opmode.TeleOp(name = "Example TeleOp")
-public class TeleOp extends OpMode {
+public class ExampleTeleOp extends OpMode {
     private Follower follower;
     private boolean lastStartPressed = false;
     @Override

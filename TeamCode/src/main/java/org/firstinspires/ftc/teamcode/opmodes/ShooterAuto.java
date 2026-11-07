@@ -14,8 +14,6 @@ import com.pedropathing.paths.Path;
 // Ivy command imports
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.Scheduler;
-
-import static com.pedropathing.api.Paths.curve;
 import static com.pedropathing.ivy.Scheduler.schedule;
 import static com.pedropathing.ivy.groups.Groups.sequential;
 import static com.pedropathing.ivy.pedro.PedroCommands.follow;
@@ -31,10 +29,9 @@ public class ShooterAuto extends OpMode {
 
     // 1. Define PoseFactory and field positions (X, Y, Heading in radians/degrees)
     private final PoseFactory poseFactory = PoseFactory.degrees();
-    private final Pose startPose   = poseFactory.of(83, 131, 90);       // Start position
-    private final Pose shootPose   = poseFactory.of(83, 126, 90);       // Shooting position
-    private final Pose curvePoint   = poseFactory.of(119, 109, 90);       // curve point position
-    private final Pose endPose     = poseFactory.of(126, 50, 90);       // End / Park position
+    private final Pose startPose   = poseFactory.of(12, 60, 0);       // Start position
+    private final Pose shootPose   = poseFactory.of(36, 36, 0);       // Shooting position
+    private final Pose endPose     = poseFactory.of(12, 12, 0);       // End / Park position
 
     private enum AutoState {
         DRIVE_TO_SHOOT_POS,
@@ -61,7 +58,7 @@ public class ShooterAuto extends OpMode {
     }
 
     private Path shootToEndPath() {
-        return curve(shootPose, curvePoint, endPose).linear(shootPose, endPose);
+        return Paths.line(shootPose, endPose).linear(shootPose, endPose);
     }
 
     @Override

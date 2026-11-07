@@ -18,8 +18,8 @@ public class ShooterIndexerSubsystem {
     private static final double INDEXER_STOP_POWER = 0.0;
 
     public ShooterIndexerSubsystem(HardwareMap hardwareMap) {
-        flywheel = hardwareMap.get(DcMotorEx.class, "shooter");
-        indexer = hardwareMap.get(CRServo.class, "indexer"); // Your CR Servo indexer
+        flywheel = hardwareMap.get(DcMotorEx.class, "Flywheel");
+        indexer = hardwareMap.get(CRServo.class, "Indexer"); // Your CR Servo indexer
     }
 
     public Command runFlywheel(double power) {
@@ -47,7 +47,7 @@ public class ShooterIndexerSubsystem {
     // Command to feed pollen via the CR Servo Indexer
     public Command feedPollen() {
         return Command.build()
-                .setStart(() -> indexer.setPower(INDEXER_FEED_POWER))
+                .setStart(() -> indexer.setPower(-INDEXER_FEED_POWER))
                 .setDone(() -> true)
                 .requiring(indexer);
     }

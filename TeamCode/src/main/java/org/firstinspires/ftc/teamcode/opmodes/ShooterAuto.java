@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
 import com.pedropathing.api.Paths;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -19,12 +20,16 @@ import static com.pedropathing.ivy.groups.Groups.sequential;
 import static com.pedropathing.ivy.pedro.PedroCommands.follow;
 
 import org.firstinspires.ftc.teamcode.pedro.Constants;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterSubsystem;
 
 @Autonomous(name = "Pedro Pathing Shooter Auto", group = "Autonomous")
 public class ShooterAuto extends OpMode {
     private Follower follower;
     private ShooterSubsystem shooter;
+    private Limelight3A limelight;
+    private IntakeSubsystem intake;
+
     private ElapsedTime stateTimer = new ElapsedTime();
 
     // 1. Define PoseFactory and field positions (X, Y, Heading in radians/degrees)

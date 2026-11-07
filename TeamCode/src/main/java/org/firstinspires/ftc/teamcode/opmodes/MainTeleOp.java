@@ -62,8 +62,8 @@ public class MainTeleOp extends OpMode {
         // Generate field-centric drive power vectors dynamically using your heading
         DrivePowers powers = ManualDrive.fieldCentric(
                 -gamepad1.left_stick_y,
-                gamepad1.left_stick_x,
-                gamepad1.right_stick_x,
+                -gamepad1.left_stick_x,
+                -gamepad1.right_stick_x,
                 follower.pose().heading()
         );
 
@@ -123,6 +123,7 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Robot Heading", Math.toDegrees(follower.pose().heading()));
         telemetry.addData("Flywheel Status", isShooterActive ? "ENGAGED" : "OFF");
         telemetry.addData("Limelight Valid Target", vision.hasTarget());
+        telemetry.addData("Limelight intake", intake.isActive()? "ON" : "OFF");
         telemetry.update();
     }
 }

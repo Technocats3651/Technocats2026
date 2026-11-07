@@ -11,13 +11,16 @@ public class IntakeSubsystem {
     private final CRServo rightServo;
     private final DcMotorEx frontRoller;
 
+    private boolean isActive;
+
     public IntakeSubsystem(HardwareMap hardwareMap) {
-        leftServo = hardwareMap.get(CRServo.class, "leftIntakeServo");
-        rightServo = hardwareMap.get(CRServo.class, "rightIntakeServo");
-        frontRoller = hardwareMap.get(DcMotorEx.class, "frontRoller");
+        leftServo = hardwareMap.get(CRServo.class, "FL_Intake_Servo");
+        rightServo = hardwareMap.get(CRServo.class, "FR_Intake_Servo");
+        frontRoller = hardwareMap.get(DcMotorEx.class, "Intake");
 
         // Reverse one side if the servos face opposite directions
         rightServo.setDirection(DcMotorSimple.Direction.REVERSE);
+        isActive = false;
     }
 
     /**
@@ -29,14 +32,19 @@ public class IntakeSubsystem {
                     leftServo.setPower(power);
                     rightServo.setPower(power);
                     frontRoller.setPower(power);
+                    isActive = true;
                 })
                 .setEnd(endCondition -> {
                     leftServo.setPower(0);
                     rightServo.setPower(0);
                     frontRoller.setPower(0);
+                    isActive = false;
                 }); // Do not call .build() here in Ivy v3!
     }
 
+    public boolean isActive(){
+        return isActive;
+    }
     /**
      * Sourced helper for an intake command that runs infinitely until interrupted.
      */

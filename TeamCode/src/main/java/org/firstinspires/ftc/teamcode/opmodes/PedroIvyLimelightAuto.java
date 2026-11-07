@@ -12,6 +12,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.teamcode.pedro.Constants;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystem;
 
 @Autonomous(name = "Ivy Pedro Limelight Auto Example", group = "Autonomous")
@@ -19,6 +20,8 @@ public class PedroIvyLimelightAuto extends OpMode {
 
     private Follower follower;
     private VisionSubsystem vision;
+
+    private IntakeSubsystem intake;
     private Path alignmentPath;
 
     // Starting coordinate posture
@@ -34,6 +37,7 @@ public class PedroIvyLimelightAuto extends OpMode {
         follower.setPose(startPose);
 
         // 2. Initialize Limelight
+        intake = new IntakeSubsystem(hardwareMap);
         vision = new VisionSubsystem(hardwareMap);
         vision.switchPipeline(0); // e.g., Pipeline 0 for Color Tracking or AprilTags
 

@@ -7,6 +7,7 @@ import com.pedropathing.ivy.Command;
 import static com.pedropathing.ivy.commands.Commands.*;
 import static com.pedropathing.ivy.groups.Groups.sequential;
 
+
 public class ShooterIndexerSubsystem {
     private final DcMotorEx flywheel;
     private final CRServo indexer;
@@ -19,6 +20,12 @@ public class ShooterIndexerSubsystem {
     public ShooterIndexerSubsystem(HardwareMap hardwareMap) {
         flywheel = hardwareMap.get(DcMotorEx.class, "shooter");
         indexer = hardwareMap.get(CRServo.class, "indexer"); // Your CR Servo indexer
+    }
+
+    public Command runFlywheel(double power) {
+        return Command.build()
+                .setStart(() -> flywheel.setPower(power))
+                .setEnd(endCondition -> flywheel.setPower(0.0));
     }
 
     // Command to rev up the shooter flywheel
@@ -55,6 +62,17 @@ public class ShooterIndexerSubsystem {
 
     // A unified macro command to execute a single cycle shot
     public Command fireShot() {
+        return sequential(
+                spinUp(),
+                waitMs(800),       // Allow time for the flywheel to reach target velocity
+                feedPollen(),
+                waitMs(500),       // Time duration required to push item completely through
+                stopIndexer(),
+                stopFlywheel()
+        );
+    }
+
+    public Command shootMacro() {
         return sequential(
                 spinUp(),
                 waitMs(800),       // Allow time for the flywheel to reach target velocity

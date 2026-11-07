@@ -14,6 +14,7 @@ import com.pedropathing.ivy.Scheduler;
 import com.pedropathing.ivy.Command;
 
 import org.firstinspires.ftc.teamcode.pedro.Constants;
+import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterIndexerSubsystem;
 
 // Important: Static imports for Ivy control flow structures and Pedro commands
@@ -30,6 +31,7 @@ public class IvyAutonomous extends LinearOpMode {
     private Follower follower;
     private ShooterIndexerSubsystem shooter;
     private Limelight3A limelight;
+    private IntakeSubsystem intake;
 
     @Override
     public void runOpMode() {
@@ -39,6 +41,7 @@ public class IvyAutonomous extends LinearOpMode {
         // 2. Initialize Subsystems & Hardware Map Configurations
         follower = Constants.create(hardwareMap);
         shooter = new ShooterIndexerSubsystem(hardwareMap);
+        intake = new IntakeSubsystem(hardwareMap);
 
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
         limelight.pipelineSwitch(0); // Set pipeline (e.g., 0 for Yellow Pollen tracking)

@@ -13,7 +13,7 @@ public class ShooterIndexerSubsystem {
     private final CRServo indexer;
 
     // Constants for your BioBuzz setup
-    private static final double SHOOTING_POWER = 0.85;
+    private static final double SHOOTING_POWER = 0.65 ;
     private static final double INDEXER_FEED_POWER = 1.0;
     private static final double INDEXER_STOP_POWER = 0.0;
 

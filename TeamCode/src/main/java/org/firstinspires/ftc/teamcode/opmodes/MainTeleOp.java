@@ -13,7 +13,6 @@ import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystem;
 import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.ManualDrive;
 
-
 @TeleOp(name = "Mecanum Ivy Dual TeleOp", group = "TeleOp")
 public class MainTeleOp extends OpMode {
 
@@ -22,9 +21,8 @@ public class MainTeleOp extends OpMode {
     private ShooterIndexerSubsystem shooter;
     private VisionSubsystem vision;
 
-    // Add these two lines at the top of your class:
     private final com.pedropathing.api.PoseFactory p = com.pedropathing.api.PoseFactory.degrees();
-    private final com.pedropathing.math.Pose startPose = p.of(0.0, 0.0, 0.0); // Defaults to center origin
+    private final com.pedropathing.math.Pose startPose = p.of(0.0, 0.0, 0.0);
 
     // Runtime state variables to handle button edge-triggers safely
     private boolean rightBumper2Last = false;
@@ -32,6 +30,7 @@ public class MainTeleOp extends OpMode {
     private boolean isShooterActive = false;
 
     private Command currentFlywheelCommand = null;
+    private Command intakeControlCommand = null; // Class variable to track the intake routine
 
     @Override
     public void init() {
@@ -41,15 +40,31 @@ public class MainTeleOp extends OpMode {
         // Factory initialization for Pedro v3 Follower mechanics
         follower = Constants.create(hardwareMap);
         follower.setPose(startPose);
+
         // Hardware subsystem mappings
         intake = new IntakeSubsystem(hardwareMap);
         shooter = new ShooterIndexerSubsystem(hardwareMap);
         vision = new VisionSubsystem(hardwareMap);
+
+        // Define the continuous loop command using Ivy's 'infinite' syntax
+        // This will now perfectly recognize the .setMotorPower method we added above!
+        intakeControlCommand = com.pedropathing.ivy.commands.Commands.infinite(() -> {
+            if (gamepad2.right_trigger > 0.1) {
+                intake.setMotorPower(gamepad2.right_trigger);
+            } else if (gamepad2.left_trigger > 0.1) {
+                intake.setMotorPower(-gamepad2.left_trigger);
+            } else {
+                intake.setMotorPower(0.0);
+            }
+        }); // Removed .requiring(intake) since we are managing it directly via start()
     }
 
     @Override
     public void start() {
         vision.startCamera(); // Fire up Limelight stream processing
+
+        // Manually schedule the trigger processing loop when TeleOp begins
+        com.pedropathing.ivy.Scheduler.schedule(intakeControlCommand);
     }
 
     @Override
@@ -57,9 +72,6 @@ public class MainTeleOp extends OpMode {
         // ==========================================
         // GAMEPAD 1: DRIVETRAIN EXTENSION
         // ==========================================
-        // Control translational and rotational mechanics using joysticks
-        // follower.setTeleOpMovementVectors(forward, strafe, turn, fieldCentric)
-        // Generate field-centric drive power vectors dynamically using your heading
         DrivePowers powers = ManualDrive.fieldCentric(
                 -gamepad1.left_stick_y,
                 -gamepad1.left_stick_x,
@@ -67,24 +79,8 @@ public class MainTeleOp extends OpMode {
                 follower.pose().heading()
         );
 
-// Pass the vectors to the manual driver
         follower.manual(powers);
-
-
-        // Always call your path/drivetrain updater first
         follower.update();
-
-        // ==========================================
-        // GAMEPAD 2: AUXILIARY INTAKE SYSTEMS
-        // ==========================================
-        // Right trigger actively intakes, Left trigger outtakes (reverses)
-        if (gamepad2.right_trigger > 0.1) {
-            intake.runIntake(gamepad2.right_trigger); // Scales speed based on analog pull
-        } else if (gamepad2.left_trigger > 0.1) {
-            intake.runIntake(-gamepad2.left_trigger); // Outtake configuration
-        } else {
-            intake.runIntake(0.0); // Stop both side servos and front roller if nothing is pressed
-        }
 
         // ==========================================
         // GAMEPAD 2: SHOOTER & FLYWHEEL CONTROL
@@ -103,8 +99,7 @@ public class MainTeleOp extends OpMode {
         }
         cross2Last = gamepad2.circle;
 
-        // Shoot macro (Right Bumper) - pushes the indexer servo out and pulls it back
-        // Checks that the shoot macro isn't already active to prevent multi-scheduling
+        // Shoot macro (Right Bumper)
         if (gamepad2.right_bumper && !rightBumper2Last) {
             Command shoot = shooter.shootMacro();
             Scheduler.schedule(shoot);
@@ -114,7 +109,7 @@ public class MainTeleOp extends OpMode {
         // ==========================================
         // PERSISTENT PROCESSING ENGINE
         // ==========================================
-        // Executes a single cycle of all running parallel commands
+        // Executes a single cycle of all running parallel commands (including Intake!)
         Scheduler.execute();
 
         // Telemetry diagnostics

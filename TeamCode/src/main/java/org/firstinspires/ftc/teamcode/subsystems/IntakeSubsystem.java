@@ -24,27 +24,29 @@ public class IntakeSubsystem {
     }
 
     /**
-     * Stateless command to run the entire intake mechanism at a given speed.
+     * Direct hardware control method.
+     * Use this for direct trigger mapping in TeleOp loops.
+     */
+    public void setMotorPower(double power) {
+        leftServo.setPower(power);
+        rightServo.setPower(power);
+        frontRoller.setPower(power);
+        isActive = Math.abs(power) > 0.05; // Mark active if power is non-zero
+    }
+
+    /**
+     * Continuous command to run the entire intake mechanism at a given speed.
      */
     public Command runIntake(double power) {
-        return Command.build()
-                .setStart(() -> {
-                    leftServo.setPower(power);
-                    rightServo.setPower(power);
-                    frontRoller.setPower(power);
-                    isActive = true;
-                })
-                .setEnd(endCondition -> {
-                    leftServo.setPower(0);
-                    rightServo.setPower(0);
-                    frontRoller.setPower(0);
-                    isActive = false;
-                }); // Do not call .build() here in Ivy v3!
+        return com.pedropathing.ivy.Command.build()
+                .setExecute(() -> setMotorPower(power))
+                .setEnd(endCondition -> setMotorPower(0.0));
     }
 
     public boolean isActive(){
         return isActive;
     }
+
     /**
      * Sourced helper for an intake command that runs infinitely until interrupted.
      */
@@ -59,4 +61,3 @@ public class IntakeSubsystem {
         return runIntake(-0.8);
     }
 }
-

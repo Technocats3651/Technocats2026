@@ -50,5 +50,11 @@ public class IntakeSubsystem {
     public Command outtakeActive() {
         return runIntake(-0.8);
     }
+
+    public void setPower(double power) {
+        leftServo.setPower(power);
+        rightServo.setPower(power);
+        frontRoller.setPower(power);
+    }
 }
 

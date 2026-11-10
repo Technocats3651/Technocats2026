@@ -46,6 +46,7 @@ public class PedroIvyLimelightAutoV2 extends OpMode {
     private Pose startPose;
     private Pose targetAreaPose;
     private Pose loadingZoneParkPose;
+    private long alignStartMs = 0;
 
     @Override
     public void init() {
@@ -101,28 +102,27 @@ public class PedroIvyLimelightAutoV2 extends OpMode {
                 .setDone(() -> !follower.isBusy());
 
         // 2. Command B: Dynamic Vision Search & Alignment
+
         Command limelightAlignAndDrive = Command.build()
                 .setStart(() -> {
-                    telemetry.addLine("Searching for vision targets...");
+                    alignStartMs = System.currentTimeMillis();
+                    alignmentPath = null;
                 })
                 .setExecute(() -> {
-                    if (vision.hasTarget()) {
+                    if (alignmentPath == null && vision.hasTarget()
+                            && vision.getLatestTarget().isValid()) {
                         LLResult result = vision.getLatestTarget();
-                        double tx = result.getTx();
-
-                        if (alignmentPath == null && Math.abs(tx) < 15) {
+                        if (Math.abs(result.getTx()) < 15) {
                             Pose currentPose = follower.pose();
-                            Pose relativeTarget = new Pose(currentPose.x() + 12.0, currentPose.y(), currentPose.heading());
-
-                            alignmentPath = line(currentPose, relativeTarget).linear(currentPose, relativeTarget);
+                            Pose target = new Pose(currentPose.x() + 12.0, currentPose.y(), currentPose.heading());
+                            alignmentPath = line(currentPose, target).linear(currentPose, target);
                             follower.follow(alignmentPath);
                         }
                     }
                 })
-                .setDone(() -> vision.hasTarget() && vision.getLatestTarget().isValid() && !follower.isBusy())
-                .setEnd((endCondition) -> {
-                    telemetry.addLine("Vision Alignment Complete.");
-                });
+                .setDone(() -> (alignmentPath != null && !follower.isBusy())
+                        || System.currentTimeMillis() - alignStartMs > 3000)
+                .setEnd(end -> telemetry.addLine("Alignment done or timed out."));
 
         // 3. Command C: Firing Chain Sequence using your Subsystem Methods
         Command shootAllBalls = sequential(

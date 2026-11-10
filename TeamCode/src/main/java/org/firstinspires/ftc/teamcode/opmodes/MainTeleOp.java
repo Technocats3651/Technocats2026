@@ -3,9 +3,11 @@ package org.firstinspires.ftc.teamcode.opmodes;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.Scheduler;
+import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.teamcode.OpModeStorage;
 import org.firstinspires.ftc.teamcode.pedro.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterIndexerSubsystem;
@@ -40,6 +42,10 @@ public class MainTeleOp extends OpMode {
 
         // Factory initialization for Pedro v3 Follower mechanics
         follower = Constants.create(hardwareMap);
+        // Use the pose saved by the autonomous, or the origin if none was saved
+        Pose startPose = OpModeStorage.autonomousEndPose != null
+                ? OpModeStorage.autonomousEndPose
+                : new Pose(0.0, 0.0, 0.0);
         follower.setPose(startPose);
         // Hardware subsystem mappings
         intake = new IntakeSubsystem(hardwareMap);
@@ -77,13 +83,13 @@ public class MainTeleOp extends OpMode {
         // ==========================================
         // GAMEPAD 2: AUXILIARY INTAKE SYSTEMS
         // ==========================================
-        // Right trigger actively intakes, Left trigger outtakes (reverses)
+
         if (gamepad2.right_trigger > 0.1) {
-            intake.runIntake(gamepad2.right_trigger); // Scales speed based on analog pull
+            intake.setPower(gamepad2.right_trigger);
         } else if (gamepad2.left_trigger > 0.1) {
-            intake.runIntake(-gamepad2.left_trigger); // Outtake configuration
+            intake.setPower(-gamepad2.left_trigger);
         } else {
-            intake.runIntake(0.0); // Stop both side servos and front roller if nothing is pressed
+            intake.setPower(0.0);
         }
 
         // ==========================================
@@ -94,7 +100,7 @@ public class MainTeleOp extends OpMode {
             isShooterActive = !isShooterActive;
 
             if (isShooterActive) {
-                currentFlywheelCommand = shooter.runFlywheel(0.9); // Spin up to 90% power
+                currentFlywheelCommand = shooter.runFlywheel(0.65); // Spin up to 90% power
                 Scheduler.schedule(currentFlywheelCommand);
             } else if (currentFlywheelCommand != null) {
                 Scheduler.cancel(currentFlywheelCommand);

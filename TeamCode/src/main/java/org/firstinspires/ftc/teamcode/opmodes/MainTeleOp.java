@@ -24,6 +24,14 @@ public class MainTeleOp extends OpMode {
     private ShooterIndexerSubsystem shooter;
     private VisionSubsystem vision;
 
+    // Hive center in field inches (measure for your alliance's hive)
+    private static final double HIVE_X = 0.0;
+    private static final double HIVE_Y = 0.0;
+
+    // Calibration table: distance (inches) -> flywheel power
+    private static final double[] DIST_IN = {36, 60, 84, 108};
+    private static final double[] POWER   = {0.65, 0.75, 0.85, 0.95};
+
     // Add these two lines at the top of your class:
     private final com.pedropathing.api.PoseFactory p = com.pedropathing.api.PoseFactory.degrees();
     private final com.pedropathing.math.Pose startPose = p.of(0.0, 0.0, 0.0); // Defaults to center origin
@@ -73,7 +81,7 @@ public class MainTeleOp extends OpMode {
                 follower.pose().heading()
         );
 
-// Pass the vectors to the manual driver
+        // Pass the vectors to the manual driver
         follower.manual(powers);
 
 
@@ -98,14 +106,18 @@ public class MainTeleOp extends OpMode {
         // Toggle the flywheel on/off using a clean boolean check on Circle/B button
         if (gamepad2.circle && !cross2Last) {
             isShooterActive = !isShooterActive;
-
-            if (isShooterActive) {
-                currentFlywheelCommand = shooter.runFlywheel(0.65); // Spin up to 90% power
-                Scheduler.schedule(currentFlywheelCommand);
-            } else if (currentFlywheelCommand != null) {
-                Scheduler.cancel(currentFlywheelCommand);
-                currentFlywheelCommand = null;
+            if (!isShooterActive) {
+                shooter.setFlywheelPower(0.0);
             }
+        }
+        cross2Last = gamepad2.circle;
+
+        if (isShooterActive) {
+            double dist = vision.distanceToTagInches();
+            if (Double.isNaN(dist)) {
+                dist = Math.hypot(HIVE_X - follower.pose().x(), HIVE_Y - follower.pose().y());
+            }
+            shooter.setFlywheelPower(powerForDistance(dist));
         }
         cross2Last = gamepad2.circle;
 
@@ -129,7 +141,20 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Robot Heading", Math.toDegrees(follower.pose().heading()));
         telemetry.addData("Flywheel Status", isShooterActive ? "ENGAGED" : "OFF");
         telemetry.addData("Limelight Valid Target", vision.hasTarget());
+        telemetry.addData("Shot distance (in)", vision.distanceToTagInches());
         telemetry.update();
+    }
+
+    private static double powerForDistance(double d) {
+        if (d <= DIST_IN[0]) return POWER[0];
+        if (d >= DIST_IN[DIST_IN.length - 1]) return POWER[POWER.length - 1];
+        for (int i = 0; i < DIST_IN.length - 1; i++) {
+            if (d <= DIST_IN[i + 1]) {
+                double t = (d - DIST_IN[i]) / (DIST_IN[i + 1] - DIST_IN[i]);
+                return POWER[i] + t * (POWER[i + 1] - POWER[i]);
+            }
+        }
+        return POWER[POWER.length - 1];
     }
 }
 

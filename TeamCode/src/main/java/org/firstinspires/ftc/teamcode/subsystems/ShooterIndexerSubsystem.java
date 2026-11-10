@@ -44,6 +44,11 @@ public class ShooterIndexerSubsystem {
                 .requiring(flywheel);
     }
 
+    // Direct power control for the flywheel, used by teleop each loop
+    public void setFlywheelPower(double power) {
+        flywheel.setPower(power);
+    }
+
     // Command to feed pollen via the CR Servo Indexer
     public Command feedPollen() {
         return Command.build()
@@ -67,8 +72,8 @@ public class ShooterIndexerSubsystem {
                 waitMs(800),       // Allow time for the flywheel to reach target velocity
                 feedPollen(),
                 waitMs(500),       // Time duration required to push item completely through
-                stopIndexer(),
-                stopFlywheel()
+                stopIndexer()
+
         );
     }
 
@@ -78,8 +83,7 @@ public class ShooterIndexerSubsystem {
                 waitMs(800),       // Allow time for the flywheel to reach target velocity
                 feedPollen(),
                 waitMs(500),       // Time duration required to push item completely through
-                stopIndexer(),
-                stopFlywheel()
+                stopIndexer()
         );
     }
 }

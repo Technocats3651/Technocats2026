@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
+
 import com.pedropathing.follower.Follower;
 import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.Scheduler;
@@ -10,9 +11,11 @@ import static com.pedropathing.ivy.groups.Groups.sequential;
 import static com.pedropathing.ivy.commands.Commands.waitMs;
 import static com.pedropathing.ivy.commands.Commands.instant;
 
+
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
+
 
 import org.firstinspires.ftc.teamcode.OpModeStorage; // 👈 Your OpModeStorage import
 import org.firstinspires.ftc.teamcode.pedro.Constants;
@@ -20,8 +23,10 @@ import org.firstinspires.ftc.teamcode.subsystems.IntakeSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.VisionSubsystem;
 import org.firstinspires.ftc.teamcode.subsystems.ShooterIndexerSubsystem;
 
+
 @Autonomous(name = "Ivy Pedro Sequential Shooter Auto V2", group = "Autonomous")
 public class PedroIvyLimelightAutoV2 extends OpMode {
+
 
     private Follower follower;
     private VisionSubsystem vision;
@@ -39,9 +44,9 @@ public class PedroIvyLimelightAutoV2 extends OpMode {
     private boolean lastGamepad1B = false;
 
     // --- Core Master Coordinates (Always Defined from Red Perspective) ---
-    private final Pose redStartPose = new Pose(24, 24, Math.toRadians(0));
-    private final Pose redTargetAreaPose = new Pose(60, 36, Math.toRadians(45));
-    private final Pose redLoadingZoneParkPose = new Pose(12, 12, Math.toRadians(90)); // Example Red park point
+    private final Pose redStartPose = new Pose(53.3, 6.5, Math.toRadians(270));
+    private final Pose redTargetAreaPose = new Pose(53.3, 15, Math.toRadians(270));
+    private final Pose redLoadingZoneParkPose = new Pose(10, 44, Math.toRadians(270)); // Example Red park point
 
     private Pose startPose;
     private Pose targetAreaPose;
@@ -76,7 +81,7 @@ public class PedroIvyLimelightAutoV2 extends OpMode {
     @Override
     public void start() {
         vision.startCamera();
-
+        OpModeStorage.isRedAlliance = (currentAlliance == Alliance.RED);
         // Calculate Poses natively based on Alliance Choice
         if (currentAlliance == Alliance.RED) {
             startPose = redStartPose;
@@ -170,4 +175,5 @@ public class PedroIvyLimelightAutoV2 extends OpMode {
         telemetry.addData("Robot Pose", follower.pose().toString());
         telemetry.update();
     }
+
 }

@@ -24,15 +24,22 @@ public class MainTeleOp extends OpMode {
     private ShooterIndexerSubsystem shooter;
     private VisionSubsystem vision;
 
-    // Hive center in field inches (measure for your alliance's hive)
-    private static final double HIVE_X = 0.0;
-    private static final double HIVE_Y = 0.0;
+    private enum Alliance { RED, BLUE }
+    private Alliance alliance = Alliance.RED;
+    private boolean bLastInit = false;
+    private boolean xLastInit = false;
+
+    // Hive centers in field inches (measure these for each alliance)
+    private static final double RED_HIVE_X = 570.0, RED_HIVE_Y = 70.0;
+    private static final double BLUE_HIVE_X = 84.0, BLUE_HIVE_Y = 70.0;
 
     // Calibration table: distance (inches) -> flywheel power
     private static final double[] DIST_IN = {36, 60, 84, 108};
     private static final double[] POWER   = {0.65, 0.75, 0.85, 0.95};
 
-    // Add these two lines at the top of your class:
+    private double headingOffset = 0.0;   // radians
+    private boolean startLast = false;
+
     private final com.pedropathing.api.PoseFactory p = com.pedropathing.api.PoseFactory.degrees();
     private final com.pedropathing.math.Pose startPose = p.of(0.0, 0.0, 0.0); // Defaults to center origin
 
@@ -59,6 +66,19 @@ public class MainTeleOp extends OpMode {
         intake = new IntakeSubsystem(hardwareMap);
         shooter = new ShooterIndexerSubsystem(hardwareMap);
         vision = new VisionSubsystem(hardwareMap);
+        alliance = OpModeStorage.isRedAlliance ? Alliance.RED : Alliance.BLUE;
+    }
+
+    @Override
+    public void init_loop() {
+        if (gamepad1.b && !bLastInit) alliance = Alliance.RED;
+        if (gamepad1.x && !xLastInit) alliance = Alliance.BLUE;
+        bLastInit = gamepad1.b;
+        xLastInit = gamepad1.x;
+
+        telemetry.addData("Alliance", alliance == Alliance.RED ? "RED (B)" : "BLUE (X)");
+        telemetry.addData("Press B for red, X for blue", "");
+        telemetry.update();
     }
 
     @Override
@@ -68,6 +88,12 @@ public class MainTeleOp extends OpMode {
 
     @Override
     public void loop() {
+
+        // Driver presses START (Options on some controllers) while the robot faces away from them
+        if (gamepad1.start && !startLast) {
+            headingOffset = follower.pose().heading();
+        }
+        startLast = gamepad1.start;
         // ==========================================
         // GAMEPAD 1: DRIVETRAIN EXTENSION
         // ==========================================
@@ -76,9 +102,9 @@ public class MainTeleOp extends OpMode {
         // Generate field-centric drive power vectors dynamically using your heading
         DrivePowers powers = ManualDrive.fieldCentric(
                 -gamepad1.left_stick_y,
-                gamepad1.left_stick_x,
+                -gamepad1.left_stick_x,
                 gamepad1.right_stick_x,
-                follower.pose().heading()
+                follower.pose().heading() - headingOffset
         );
 
         // Pass the vectors to the manual driver
@@ -113,9 +139,11 @@ public class MainTeleOp extends OpMode {
         cross2Last = gamepad2.circle;
 
         if (isShooterActive) {
-            double dist = vision.distanceToTagInches();
+            double dist = vision.distanceToTagsInches(hiveTags());
             if (Double.isNaN(dist)) {
-                dist = Math.hypot(HIVE_X - follower.pose().x(), HIVE_Y - follower.pose().y());
+                double hiveX = (alliance == Alliance.RED) ? RED_HIVE_X : BLUE_HIVE_X;
+                double hiveY = (alliance == Alliance.RED) ? RED_HIVE_Y : BLUE_HIVE_Y;
+                dist = Math.hypot(hiveX - follower.pose().x(), hiveY - follower.pose().y());
             }
             shooter.setFlywheelPower(powerForDistance(dist));
         }
@@ -141,7 +169,7 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Robot Heading", Math.toDegrees(follower.pose().heading()));
         telemetry.addData("Flywheel Status", isShooterActive ? "ENGAGED" : "OFF");
         telemetry.addData("Limelight Valid Target", vision.hasTarget());
-        telemetry.addData("Shot distance (in)", vision.distanceToTagInches());
+        telemetry.addData("Shot distance (in)", vision.distanceToTagsInches(hiveTags()));
         telemetry.update();
     }
 
@@ -155,6 +183,9 @@ public class MainTeleOp extends OpMode {
             }
         }
         return POWER[POWER.length - 1];
+    }
+    private int[] hiveTags() {
+        return alliance == Alliance.RED ? VisionSubsystem.RED_HIVE_TAGS : VisionSubsystem.BLUE_HIVE_TAGS;
     }
 }
 

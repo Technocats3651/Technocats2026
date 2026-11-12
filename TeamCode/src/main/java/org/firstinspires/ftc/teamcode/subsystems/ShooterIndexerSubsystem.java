@@ -44,6 +44,23 @@ public class ShooterIndexerSubsystem {
                 .requiring(flywheel);
     }
 
+    // Distance (inches) to hive -> flywheel power. Placeholder values until calibrated on the field.
+    private static final double[] DIST_IN = {36, 60, 84, 108};
+    private static final double[] POWER   = {0.65, 0.75, 0.85, 0.95};
+
+    public static double powerForDistance(double d) {
+        if (d <= DIST_IN[0]) return POWER[0];
+        if (d >= DIST_IN[DIST_IN.length - 1]) return POWER[POWER.length - 1];
+        for (int i = 0; i < DIST_IN.length - 1; i++) {
+            if (d <= DIST_IN[i + 1]) {
+                double t = (d - DIST_IN[i]) / (DIST_IN[i + 1] - DIST_IN[i]);
+                return POWER[i] + t * (POWER[i + 1] - POWER[i]);
+            }
+        }
+        return POWER[POWER.length - 1];
+    }
+
+
     // Direct power control for the flywheel, used by teleop each loop
     public void setFlywheelPower(double power) {
         flywheel.setPower(power);

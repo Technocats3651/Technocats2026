@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode.opmodes;
 
 import com.pedropathing.follower.Follower;
-import com.pedropathing.ivy.Command;
 import com.pedropathing.ivy.Scheduler;
 import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -16,7 +15,7 @@ import com.pedropathing.drivetrain.DrivePowers;
 import com.pedropathing.follower.ManualDrive;
 
 
-@TeleOp(name = "Mecanum Ivy Dual TeleOp", group = "TeleOp")
+@TeleOp(name = "Mecanum Ivy Dual TeleOp V2", group = "TeleOp")
 public class MainTeleOp extends OpMode {
 
     private Follower follower;
@@ -29,7 +28,7 @@ public class MainTeleOp extends OpMode {
     private boolean bLastInit = false;
     private boolean xLastInit = false;
 
-    // Hive centers in field inches (measure these for each alliance)
+    // Hive pivot midpoints in field inches (per alliance)
     private static final double RED_HIVE_X = 58.0, RED_HIVE_Y = 71.5;
     private static final double BLUE_HIVE_X = 84.0, BLUE_HIVE_Y = 71.5;
 
@@ -37,36 +36,45 @@ public class MainTeleOp extends OpMode {
     private static final double[] DIST_IN = {36, 60, 84, 108};
     private static final double[] POWER   = {0.65, 0.75, 0.85, 0.95};
 
+    // Hold-to-aim tuning
+    private static final double AIM_KP = 0.012;          // turn power per degree of tx
+    private static final double AIM_LOCK_DEG = 1.5;      // must be inside this to lock
+    private static final double AIM_RELEASE_DEG = 4.0;   // stays locked until outside this
+    private static final double AIM_FILTER = 0.3;        // 0..1, lower = smoother
+    private static final long AIM_LOST_HOLD_MS = 150;    // keep last angle this long after tag drops
+    private static final double AIM_MAX_TURN = 0.4;
+
+    private double txFiltered = 0.0;
+    private boolean txValid = false;
+    private boolean aimLocked = false;
+    private long lastTagSeenMs = 0;
+
     private double headingOffset = 0.0;   // radians
     private boolean startLast = false;
-
-    private final com.pedropathing.api.PoseFactory p = com.pedropathing.api.PoseFactory.degrees();
-    private final com.pedropathing.math.Pose startPose = p.of(0.0, 0.0, 0.0); // Defaults to center origin
 
     // Runtime state variables to handle button edge-triggers safely
     private boolean rightBumper2Last = false;
     private boolean cross2Last = false;
     private boolean isShooterActive = false;
 
-    private Command currentFlywheelCommand = null;
-
     @Override
     public void init() {
-        // Reset the static Ivy control engine
         Scheduler.reset();
 
-        // Factory initialization for Pedro v3 Follower mechanics
         follower = Constants.create(hardwareMap);
+
         // Use the pose saved by the autonomous, or the origin if none was saved
-        Pose startPose = OpModeStorage.autonomousEndPose != null
+        Pose savedPose = OpModeStorage.autonomousEndPose != null
                 ? OpModeStorage.autonomousEndPose
                 : new Pose(0.0, 0.0, 0.0);
-        follower.setPose(startPose);
-        // Hardware subsystem mappings
+        follower.setPose(savedPose);
+
         intake = new IntakeSubsystem(hardwareMap);
         shooter = new ShooterIndexerSubsystem(hardwareMap);
         vision = new VisionSubsystem(hardwareMap);
+
         alliance = OpModeStorage.isRedAlliance ? Alliance.RED : Alliance.BLUE;
+        headingOffset = follower.pose().heading();
     }
 
     @Override
@@ -83,41 +91,73 @@ public class MainTeleOp extends OpMode {
 
     @Override
     public void start() {
-        vision.startCamera(); // Fire up Limelight stream processing
+        vision.startCamera();
     }
 
     @Override
     public void loop() {
 
-        // Driver presses START (Options on some controllers) while the robot faces away from them
+        // Driver presses START while the robot faces away from them
         if (gamepad1.start && !startLast) {
             headingOffset = follower.pose().heading();
         }
         startLast = gamepad1.start;
+
         // ==========================================
-        // GAMEPAD 1: DRIVETRAIN EXTENSION
+        // GAMEPAD 1: DRIVETRAIN WITH HOLD-TO-AIM
         // ==========================================
-        // Control translational and rotational mechanics using joysticks
-        // follower.setTeleOpMovementVectors(forward, strafe, turn, fieldCentric)
-        // Generate field-centric drive power vectors dynamically using your heading
+        // Hold left bumper to rotate the robot onto the hive tags.
+        // While held, the right stick rotation is ignored.
+        int[] tags = hiveTags();
+        double turn = gamepad1.right_stick_x;
+        boolean aimed = false;
+
+        if (gamepad1.left_bumper) {
+            long now = System.currentTimeMillis();
+            double tx = vision.averageTx(tags);
+
+            if (!Double.isNaN(tx)) {
+                // Smooth the raw angle so single noisy frames don't move the robot
+                txFiltered = txValid ? txFiltered + AIM_FILTER * (tx - txFiltered) : tx;
+                txValid = true;
+                lastTagSeenMs = now;
+            } else if (now - lastTagSeenMs > AIM_LOST_HOLD_MS) {
+                // Tag gone for too long, so stop trusting the old angle
+                txValid = false;
+            }
+
+            if (txValid) {
+                double a = Math.abs(txFiltered);
+                // Hysteresis: lock tightly, release only when clearly off target
+                aimLocked = aimLocked ? (a < AIM_RELEASE_DEG) : (a < AIM_LOCK_DEG);
+
+                if (aimLocked) {
+                    turn = 0.0;
+                    aimed = true;
+                } else {
+                    // Positive tx = target right of center, so turn right (negative turn)
+                    turn = Math.max(-AIM_MAX_TURN, Math.min(AIM_MAX_TURN, -AIM_KP * txFiltered));
+                }
+            } else {
+                aimLocked = false;
+            }
+        } else {
+            aimLocked = false;
+            txValid = false;
+        }
+
         DrivePowers powers = ManualDrive.fieldCentric(
                 -gamepad1.left_stick_y,
                 -gamepad1.left_stick_x,
-                gamepad1.right_stick_x,
+                turn,
                 follower.pose().heading() - headingOffset
         );
-
-        // Pass the vectors to the manual driver
         follower.manual(powers);
-
-
-        // Always call your path/drivetrain updater first
         follower.update();
 
         // ==========================================
         // GAMEPAD 2: AUXILIARY INTAKE SYSTEMS
         // ==========================================
-
         if (gamepad2.right_trigger > 0.1) {
             intake.setPower(gamepad2.right_trigger);
         } else if (gamepad2.left_trigger > 0.1) {
@@ -129,7 +169,7 @@ public class MainTeleOp extends OpMode {
         // ==========================================
         // GAMEPAD 2: SHOOTER & FLYWHEEL CONTROL
         // ==========================================
-        // Toggle the flywheel on/off using a clean boolean check on Circle/B button
+        // Toggle the flywheel on/off with Circle/B
         if (gamepad2.circle && !cross2Last) {
             isShooterActive = !isShooterActive;
             if (!isShooterActive) {
@@ -138,8 +178,9 @@ public class MainTeleOp extends OpMode {
         }
         cross2Last = gamepad2.circle;
 
+        // While on, set power every loop from the distance to the hive
         if (isShooterActive) {
-            double dist = vision.distanceToTagsInches(hiveTags());
+            double dist = vision.distanceToTagsInches(tags);
             if (Double.isNaN(dist)) {
                 double hiveX = (alliance == Alliance.RED) ? RED_HIVE_X : BLUE_HIVE_X;
                 double hiveY = (alliance == Alliance.RED) ? RED_HIVE_Y : BLUE_HIVE_Y;
@@ -147,20 +188,16 @@ public class MainTeleOp extends OpMode {
             }
             shooter.setFlywheelPower(powerForDistance(dist));
         }
-        cross2Last = gamepad2.circle;
 
-        // Shoot macro (Right Bumper) - pushes the indexer servo out and pulls it back
-        // Checks that the shoot macro isn't already active to prevent multi-scheduling
-        if (gamepad2.right_bumper && !rightBumper2Last) {
-            Command shoot = shooter.shootMacro();
-            Scheduler.schedule(shoot);
+        // Shoot (Right Bumper) only when the driver is aimed (left bumper held and locked)
+        if (gamepad2.right_bumper && !rightBumper2Last && aimed) {
+            Scheduler.schedule(shooter.shootMacro());
         }
         rightBumper2Last = gamepad2.right_bumper;
 
         // ==========================================
         // PERSISTENT PROCESSING ENGINE
         // ==========================================
-        // Executes a single cycle of all running parallel commands
         Scheduler.execute();
 
         // Telemetry diagnostics
@@ -168,8 +205,9 @@ public class MainTeleOp extends OpMode {
         telemetry.addData("Y Position", follower.pose().y());
         telemetry.addData("Robot Heading", Math.toDegrees(follower.pose().heading()));
         telemetry.addData("Flywheel Status", isShooterActive ? "ENGAGED" : "OFF");
-        telemetry.addData("Limelight Valid Target", vision.hasTarget());
-        telemetry.addData("Shot distance (in)", vision.distanceToTagsInches(hiveTags()));
+        telemetry.addData("Aim", gamepad1.left_bumper ? (aimed ? "LOCKED" : (txValid ? "AIMING" : "NO TAG")) : "off");
+        telemetry.addData("Tag tx raw / filtered", String.format("%.2f / %.2f", vision.averageTx(tags), txFiltered));
+        telemetry.addData("Shot distance (in)", vision.distanceToTagsInches(tags));
         telemetry.update();
     }
 
@@ -184,8 +222,8 @@ public class MainTeleOp extends OpMode {
         }
         return POWER[POWER.length - 1];
     }
+
     private int[] hiveTags() {
         return alliance == Alliance.RED ? VisionSubsystem.RED_HIVE_TAGS : VisionSubsystem.BLUE_HIVE_TAGS;
     }
 }
-

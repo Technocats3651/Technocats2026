@@ -30,8 +30,8 @@ public class MainTeleOp extends OpMode {
     private boolean xLastInit = false;
 
     // Hive centers in field inches (measure these for each alliance)
-    private static final double RED_HIVE_X = 570.0, RED_HIVE_Y = 70.0;
-    private static final double BLUE_HIVE_X = 84.0, BLUE_HIVE_Y = 70.0;
+    private static final double RED_HIVE_X = 58.0, RED_HIVE_Y = 71.5;
+    private static final double BLUE_HIVE_X = 84.0, BLUE_HIVE_Y = 71.5;
 
     // Calibration table: distance (inches) -> flywheel power
     private static final double[] DIST_IN = {36, 60, 84, 108};

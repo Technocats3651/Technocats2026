@@ -23,7 +23,7 @@ public class VisionSubsystem {
     // Camera geometry in inches and degrees. Measure these before use.
     // While they are 0.0, distanceToTagsInches returns NaN and callers fall back to odometry.
     public static final double TAG_HEIGHT_IN = 50.0; // tag center height above the floor
-    public static final double CAM_HEIGHT_IN = 0.0; // lens height above the floor
+    public static final double CAM_HEIGHT_IN = 13.75; // lens height above the floor
     public static final double CAM_ANGLE_DEG = 45.0; // lens tilt above horizontal, positive = up
 
     private final Limelight3A limelight;
